@@ -46,7 +46,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 
 	// ゲームループで使う変数の宣言
-	bool hitFulg = false;
+	bool hitFlag = false;
 	Vector2 lineStart = { 20 ,20 }, lineEnd = { 120, 20 };
 
 	int circleR = 40;
@@ -95,13 +95,13 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			lineEnd.x += 10;
 		}
 
-		hitFulg = CheckLine2Circle(lineStart, lineEnd, circle, circleR);
+		hitFlag = CheckLine2Circle(lineStart, lineEnd, circle, circleR);
 
 
 		// 描画処理
 		DrawLine(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y, GetColor(255, 255, 255));
 
-		if (hitFulg)
+		if (hitFlag)
 		{
 			DrawCircle(circle.x, circle.y, circleR, GetColor(255, 0, 0));
 		}
