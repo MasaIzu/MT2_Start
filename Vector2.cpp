@@ -1,106 +1,116 @@
-#include "Vector2.h"
-#include <cmath>
+#include"Vector2.h"
+#include<cmath>
 
-Vector2::Vector2() :x(0), y(0)
-{}
-
-Vector2::Vector2(float x, float y) : x(1.0f), y(3.0f)
+//零ベクトル
+Vector2::Vector2() : x(0.0f), y(0.0f)
 {
-
 }
 
+Vector2::Vector2(float x, float y) : x(x), y(y)
+{
+}
+
+// ベクトルの長さを計算する
 float Vector2::length() const
 {
-    return std::sqrt(x * x + y * y);
+	return std::sqrt(x * x + y * y);
 }
 
-Vector2& Vector2::normalize()
+// 正規化ベクトル
+Vector2& Vector2::normalized()
 {
-    float len = length();
-    if (len != 0) {
-        return *this /= len;
-    }
-    return *this;
+	float len = length();
+	if (len != 0)
+	{
+		return *this /= len;
+
+	}
+
+	return *this;
 }
 
+// もう一方のベクトルとの内積
 float Vector2::dot(const Vector2& v) const
 {
-    return x * v.x + y * v.y;
+	return x * v.x + y * v.y;
 }
-
+//外積を求める
 float Vector2::cross(const Vector2& v) const
 {
-    return x * v.x - y * v.y;;
+	return x * v.y - v.x * y;
 }
 
-Vector2 Vector2::operator+()const
+//単項演算子オーバーロード
+Vector2 Vector2::operator+() const
 {
-
-    return *this;
+	return *this;
 }
 
-Vector2 Vector2::operator-()const
+Vector2 Vector2::operator-() const
 {
-    return Vector2(-*this);
+	return  Vector2(-x, -y);
 }
 
+//代入演算子オーバーロード
 Vector2& Vector2::operator+=(const Vector2& v)
 {
-    this->x += v.x;
-    this->y += v.y;
+	x += v.x;
+	y += v.y;
 
-    return *this;
+	return *this;
 }
 
 Vector2& Vector2::operator-=(const Vector2& v)
 {
-    this->x -= v.x;
-    this->y -= v.y;
+	x -= v.x;
+	y -= v.y;
 
-    return *this;
+	return *this;
 }
 
-Vector2& Vector2::operator+=(float s)
+Vector2& Vector2::operator*=(float s)
 {
-    this->x = s;
-    this->y = s;
+	x *= s;
+	y *= s;
 
-    return *this;
+	return *this;
 }
 
 Vector2& Vector2::operator/=(float s)
 {
-    x /= s;
-    y /= s;
-    return *this;
+	x /= s;
+	y /= s;
+
+	return *this;
 }
 
-
-const Vector2 operator + (const Vector2& v1, const Vector2& v2)
+//Vector2 クラスに属さない関数群
+//二項演算子
+const Vector2 operator+(const Vector2& v1, const Vector2& v2)
 {
-    Vector2 temp(v1);
-    return temp += v2;
+	Vector2 temp(v1);
+	return temp += v2;
 }
 
-const Vector2 operator - (const Vector2& v1, const Vector2& v2)
+const Vector2 operator-(const Vector2& v1, const Vector2& v2)
 {
-    Vector2 temp(v1);
-    return temp -= v2;
+	Vector2 temp(v1);
+	return temp -= v2;
 }
 
-const Vector2 operator *(const Vector2& v, float s)
+const Vector2 operator*(const Vector2& v, float s)
 {
-    Vector2 temp(v);
-    return temp * s;
+	Vector2 temp(v);
+	return temp *= s;
 }
 
-const Vector2 operator *(float s, const Vector2& v)
+const Vector2 operator*(float s, const Vector2& v)
 {
-    return v * s;
+	return v * s;
 }
 
 const Vector2 operator/(const Vector2& v, float s)
 {
-    Vector2 temp(v);
-    return temp / s;
+	Vector2 temp(v);
+	return temp /= s;
 }

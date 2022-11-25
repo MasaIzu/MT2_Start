@@ -1,159 +1,132 @@
-#include <DxLib.h>
-#include "Vector3.h"
-#include <cstring> //memcpy
-#include<vector>
+#include "DxLib.h"
+#include"Vector2.h"
+#include<cmath>
 
-//線分の描画
-//Dxlib => int DrawLine3D(VECTOR Pos1,VECTOR Pos2,const unsigned int Color);
-int DrawLine3D(const Vector3& Pos1, const Vector3& Pos2, const unsigned int Color);
+bool CheckLine2Circle(Vector2& lineStart, Vector2& lineEnd, Vector2& circle, int circleR);
 
-//カメラの位置と姿勢の設定
-//Dxlib => int SetCameraPositionAndTargetAndUpVec(VECTOR Position, VECTOR Target, VECTOR Up);
-int SetCameraPositionAndTargetAndUpVec(
-	const Vector3& cameraPosition,	//カメラの位置
-	const Vector3& cameraTarget,	//カメラの注視点
-	const Vector3& cameraUp			//カメラの上の向き
-);
+// ウィンドウのタイトルに表示する文字列
+const char TITLE[] = "LE2B_04_イズミダマサト: タイトル";
 
-//球の描画
-//Dxlib => int DrawSphere3D(VECTOR CenterPos,float r,int DivNum,unsigned int DifColor,unsigned int SpcColor,int FillFlag);
-int DrawSphere3D(const Vector3& CenterPos, const float r, const int DivNum,
-	const unsigned int DifColor, const unsigned int SpcColor, const int FillFlag);
+// ウィンドウ横幅
+const int WIN_WIDTH = 600;
 
-//関数プロトタイプ宣言
-void DrawAxis3D(const float length);	//x,y,z軸の描画
+// ウィンドウ縦幅
+const int WIN_HEIGHT = 400;
 
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine,
+	_In_ int nCmdShow) {
+	// ウィンドウモードに設定
+	ChangeWindowMode(TRUE);
 
-//制御店の集合(vectorコンテナ),補完する区間の添字、時間経過率
-Vector3 splinePosition(const std::vector<Vector3>& points, size_t startIndex, float t);
+	// ウィンドウサイズを手動では変更させず、
+	// かつウィンドウサイズに合わせて拡大できないようにする
+	SetWindowSizeChangeEnableFlag(FALSE, FALSE);
 
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow) {
+	// タイトルを変更
+	SetMainWindowText(TITLE);
 
-	const int WindowWidth = 1024;
-	const int WindowHeight = 576;
+	// 画面サイズの最大サイズ、カラービット数を設定(モニターの解像度に合わせる)
+	SetGraphMode(WIN_WIDTH, WIN_HEIGHT, 32);
 
-	ChangeWindowMode(true);//ウィンドウモードになる
-	SetGraphMode(WindowWidth, WindowHeight, 32);//画面モードのセット
-	SetBackgroundColor(0, 0, 64);//背景色RGB
-	if (DxLib_Init() == -1) { return -1; }// DXlibの初期化
-	SetDrawScreen(DX_SCREEN_BACK);// (ダブルバッファ)描画先グラフィック領域は裏面を指定
+	// 画面サイズを設定(解像度との比率で設定)
+	SetWindowSizeExtendRate(1.0);
 
-	// Ｚバッファを有効にする
-	SetUseZBuffer3D(TRUE);
-	// Ｚバッファへの書き込みを有効にする
-	SetWriteZBuffer3D(TRUE);
+	// 画面の背景色を設定する
+	SetBackgroundColor(0x00, 0x00, 0x00);
 
-	////カメラの初期化
-	//Vector3 cameraPosition(50.0f, 50.0f, -400.0f);
-	//Vector3 cameraTarget(0.0f, 0.0f, 0.0f);
-	//Vector3 cameraUp(0.0f, 1.0f, 0.0f);
-
-	//クリップ面        近　　　 遠
-	SetCameraNearFar(1.0f, 1000.0f);//カメラの有効範囲の設定
-	SetCameraScreenCenter(WindowWidth / 2.0f, WindowHeight / 2.0f);//画面の中心をカメラの中心に合わせる
-	SetCameraPositionAndTargetAndUpVec(
-		Vector3(-20.0f, 20.0f, -200.0f),			//カメラの位置
-		//Vector3(0.0f, 200.0f, 0.0f),				//カメラの位置
-		Vector3(0.0f, 0.0f, 0.0f),				//カメラの注視点
-		Vector3(0.0f, 0.0f, 1.0f)				//カメラの上の向き
-	);
-
-	//時間計算に必要なデータ
-	long long startCount = 0;
-	long long nowCount = 0;
-	long long elapsedCount = 0;
-
-	//補間で使うデータ
-	//start → end を5秒で完了させる
-	Vector3 p0(-100.0f, 0, 0);			//スタート地点
-	Vector3 p1(-50.0f, 50.0f, 50.0f);	//制御点その1
-	Vector3 p2(50.0f, -30.0f, -50.0f);	//制御点その2
-	Vector3 p3(100.0f, 0.0f, 0.0f);		//ゴール地点
-
-	std::vector<Vector3>points{ p0,p0,p1,p2,p3,p3 };
-
-	float maxTime = 5.0f;				//全体時間[s]
-	float timeRate;						//何％時間が進んだか
-
-	//球の位置
-	Vector3 position;
-
-	//実行前にカウント値を取得
-	startCount = GetNowHiPerformanceCount(); //long long int型 64bit int
-
-	size_t startIndex = 1;
-
-	//ゲームループ
-	while (ProcessMessage() == 0 && CheckHitKey(KEY_INPUT_ESCAPE) == 0) {
-
-		//// 更新処理
-
-		//[R]でリセット
-		if (CheckHitKey(KEY_INPUT_R)) {
-			startCount = GetNowHiPerformanceCount();
-			startIndex = 1;
-		}
-
-		//経過時間(elapsedTime[s])の計算
-		nowCount = GetNowHiPerformanceCount();
-		elapsedCount = nowCount - startCount;
-		float elapsedTime = static_cast<float> (elapsedCount) / 1000000.0f;
-
-		//スタート地点		: start
-		//エンド地点		: end
-		//経過時間		: elapsed[s]
-		//移動完了の率	(経過時間/全体時間) : timeRate(％)
-
-		timeRate = elapsedTime / maxTime;
-		//timeRate = min(elapsedTime / maxTime, 1.0f);
-
-		if (timeRate >= 1.0f) {
-			if (startIndex < points.size() - 3) {
-
-				startIndex += 1;
-				timeRate -= 1.0f;
-				startCount = GetNowHiPerformanceCount();
-			}
-			else {
-				timeRate = 1.0f;
-			}
-		}
-		position = splinePosition(points, startIndex, timeRate);
-
-
-		//Vector3 a = lerp(p0, p1, timeRate);
-		//Vector3 b = lerp(p1, p2, timeRate);
-		//Vector3 c = lerp(p2, p3, timeRate);
-
-		//Vector3 d = lerp(a, b, timeRate);
-		//Vector3 e = lerp(b, c, timeRate);
-
-		//position = lerp(d, e, timeRate);
-		//position = easeIn(start,end,timerate);
-		//position = easeOut(start,end,timerate);
-		//position = easeInOut(start,end,timerate);
-
-		// 描画処理
-		ClearDrawScreen();	//画面を消去
-		DrawAxis3D(500.0f);	//xyz軸の描画
-
-		//球の描画
-		DrawSphere3D(position, 5.0f, 32, GetColor(255, 0, 0), GetColor(255, 255, 255), TRUE);
-		DrawSphere3D(p0, 2.5f, 32, GetColor(0, 255, 0), GetColor(255, 255, 255), TRUE);
-		DrawSphere3D(p1, 2.5f, 32, GetColor(0, 255, 0), GetColor(255, 255, 255), TRUE);
-		DrawSphere3D(p2, 2.5f, 32, GetColor(0, 255, 0), GetColor(255, 255, 255), TRUE);
-		DrawSphere3D(p3, 2.5f, 32, GetColor(0, 255, 0), GetColor(255, 255, 255), TRUE);
-
-		DrawFormatString(0, 0, GetColor(255, 255, 255), "position (%5.1f,%5.1f,%5.1f)", position.x, position.y, position.z);
-		DrawFormatString(0, 20, GetColor(255, 255, 255), "%7.3f[s]", elapsedTime);
-		DrawFormatString(0, 40, GetColor(255, 255, 255), "[R]: Restart");
-		//フリップする
-		ScreenFlip();
+	// DXlibの初期化
+	if (DxLib_Init() == -1) {
+		return -1;
 	}
 
-	//20ミリ秒待機(疑似60FPS)
-	WaitTimer(20);
+	// (ダブルバッファ)描画先グラフィック領域は裏面を指定
+	SetDrawScreen(DX_SCREEN_BACK);
 
+	// 画像などのリソースデータの変数宣言と読み込み
+
+
+	// ゲームループで使う変数の宣言
+	bool hitFulg = false;
+	Vector2 lineStart = { 20 ,20 }, lineEnd = { 120, 20 };
+
+	int circleR = 40;
+
+	Vector2 circle = { WIN_WIDTH / 2,WIN_HEIGHT / 2 };
+
+	// 最新のキーボード情報用
+	char keys[256] = { 0 };
+
+	// 1ループ(フレーム)前のキーボード情報
+	char oldkeys[256] = { 0 };
+
+	// ゲームループ
+	while (true) {
+		// 最新のキーボード情報だったものは1フレーム前のキーボード情報として保存
+		for (int i = 0; i < 256; ++i)
+		{
+			oldkeys[i] = keys[i];
+		}
+		// 最新のキーボード情報を取得
+		GetHitKeyStateAll(keys);
+
+		// 画面クリア
+		ClearDrawScreen();
+		//---------  ここからプログラムを記述  ----------//
+
+		// 更新処理
+		if (keys[KEY_INPUT_W])
+		{
+			lineStart.y -= 10;
+			lineEnd.y -= 10;
+		}
+		if (keys[KEY_INPUT_S])
+		{
+			lineStart.y += 10;
+			lineEnd.y += 10;
+		}
+		if (keys[KEY_INPUT_A])
+		{
+			lineStart.x -= 10;
+			lineEnd.x -= 10;
+		}
+		if (keys[KEY_INPUT_D])
+		{
+			lineStart.x += 10;
+			lineEnd.x += 10;
+		}
+
+		hitFulg = CheckLine2Circle(lineStart, lineEnd, circle, circleR);
+
+
+		// 描画処理
+		DrawLine(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y, GetColor(255, 255, 255));
+
+		if (hitFulg)
+		{
+			DrawCircle(circle.x, circle.y, circleR, GetColor(255, 0, 0));
+		}
+		else
+		{
+			DrawCircle(circle.x, circle.y, circleR, GetColor(255, 255, 255));
+		}
+
+		//---------  ここまでにプログラムを記述  ---------//
+		// (ダブルバッファ)裏面
+		ScreenFlip();
+
+		// 20ミリ秒待機(疑似60FPS)
+		WaitTimer(20);
+
+		// Windowsシステムからくる情報を処理する
+		if (ProcessMessage() == -1) {
+			break;
+		}
+
+		// ESCキーが押されたらループから抜ける
+		if (CheckHitKey(KEY_INPUT_ESCAPE) == 1) {
+			break;
+		}
+	}
 	// Dxライブラリ終了処理
 	DxLib_End();
 
@@ -161,71 +134,32 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	return 0;
 }
 
-//x,y,z軸の描画
-void DrawAxis3D(const float length) {
-	//軸の線の描画
-	DrawLine3D(Vector3(-length, 0, 0), Vector3(+length, 0, 0), GetColor(255, 0, 0));
-	DrawLine3D(Vector3(0, -length, 0), Vector3(0, +length, 0), GetColor(0, 255, 0));
-	DrawLine3D(Vector3(0, 0, -length), Vector3(0, 0, +length), GetColor(0, 0, 255));
-}
+bool CheckLine2Circle(Vector2& lineStart, Vector2& lineEnd, Vector2& circle, int circleR)
+{
+	Vector2 lineVec = lineEnd - lineStart;
 
-//キー操作の描画
-void DrawKeyOperation() {
-	const unsigned white = GetColor(255, 255, 255);
+	Vector2 lineEndCirclVec = circle - lineEnd;
 
-	DrawFormatString(10, 20 * 1, white, "[W][E][R]  R : リセット");
-	DrawFormatString(10, 20 * 2, white, "[A][S][D] AD : y軸まわりの回転");
-	DrawFormatString(10, 20 * 3, white, "[Z]	   WS : X軸まわりの回転");
-	DrawFormatString(10, 20 * 4, white, "		　　EZ : Z軸まわりの回転");
-}
+	Vector2 lineStartCirclVec = circle - lineStart;
+	Vector2 normLineVec = lineVec.normalized();
 
-//以降、Dxlibの各関数でVector3型 Matrix4型 を利用できるようにする関数群
-//球の描画
-//Dxlib => int DrawSphere3D(VECTOR CenterPos, float r, int DivNum, unsigned int DifColor, unsigned int SpcColor, int FillFlag);
+	float distance = lineStartCirclVec.cross(normLineVec);
 
-int DrawSphere3D(const Vector3& CenterPos, const float r, const int DivNum,
-	const unsigned int DifColor, const unsigned int SpcColor, const int FillFlag) {
-	VECTOR centerPos = { CenterPos.x,CenterPos.y,CenterPos.z };
+	if (fabs(distance) < circleR)
+	{
+		float circlVecLineStartVecDot = lineStartCirclVec.dot(lineVec);
 
-	return DrawSphere3D(centerPos, r, DivNum, DifColor, SpcColor, FillFlag);
-}
+		float circlVecLineEndVecDot = lineEndCirclVec.dot(lineVec);
 
-//線分の描画
-//Dxlib => int DrawLine3D(VECTOR Pos1, VECTOR Pos2, unsigned int Color);
-int DrawLine3D(const Vector3& Pos1, const Vector3& Pos2, const unsigned int Color) {
-	VECTOR p1 = { Pos1.x, Pos1.y, Pos1.z };
-	VECTOR p2 = { Pos2.x, Pos2.y, Pos2.z };
+		if (circlVecLineStartVecDot * circlVecLineEndVecDot <= 0)
+		{
+			return true;
+		}
 
-	return DrawLine3D(p1, p2, Color);
-}
-
-// カメラの位置と姿勢の設定
-int SetCameraPositionAndTargetAndUpVec(
-	const Vector3& cameraPosition,  // カメラの位置
-	const Vector3& cameraTarget,    // カメラの注視点
-	const Vector3& cameraUp         // カメラの上の向き
-) {
-	VECTOR position = { cameraPosition.x,cameraPosition.y,cameraPosition.z };
-	VECTOR target = { cameraTarget.x,cameraTarget.y,cameraTarget.z };
-	VECTOR up = { cameraUp.x,cameraUp.y,cameraUp.z };
-
-	return SetCameraPositionAndTargetAndUpVec(position, target, up);
-}
-
-Vector3 splinePosition(const std::vector<Vector3>& points, size_t startIndex, float t) {
-
-	//補間すべき点の数
-	size_t n = points.size() - 2;
-
-	if (startIndex > n)return points[n];
-	if (startIndex < 1)return points[1];
-
-	Vector3 p0 = points[startIndex - 1];
-	Vector3 p1 = points[startIndex];
-	Vector3 p2 = points[startIndex + 1];
-	Vector3 p3 = points[startIndex + 2];
-
-	Vector3 position = 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * (t * t) + (-p0 + 3 * p1 - 3 * p2 + p3) * (t * t * t));
-
-	return position;
+		if (lineEndCirclVec.length() < circleR || lineStartCirclVec.length() < circleR)
+		{
+			return true;
+		}
+	}
+	return false;
 }
