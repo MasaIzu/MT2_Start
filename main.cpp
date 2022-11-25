@@ -147,15 +147,13 @@ bool CheckLineCircle(Vector2& lineStart, Vector2& lineEnd, Vector2& circle, int 
 	if (fabs(distance) < circleR)
 	{
 		float circlVecLineStartVecDot = lineStartCirclVec.dot(lineVec);
-
 		float circlVecLineEndVecDot = lineEndCirclVec.dot(lineVec);
 
 		if (circlVecLineStartVecDot * circlVecLineEndVecDot <= 0)
 		{
 			return true;
 		}
-
-		if (lineEndCirclVec.length() < circleR || lineStartCirclVec.length() < circleR)
+		else if (lineEndCirclVec.length() < circleR || lineStartCirclVec.length() < circleR)
 		{
 			return true;
 		}
