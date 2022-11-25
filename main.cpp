@@ -48,7 +48,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	// ゲームループで使う変数の宣言
 	bool hitFlag = false;
 	Vector2 lineStart = { 20 ,20 }, lineEnd = { 120, 20 };
-
+	int speed = 10;
 	int circleR = 40;
 
 	Vector2 circle = { WIN_WIDTH / 2,WIN_HEIGHT / 2 };
@@ -76,23 +76,23 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		// 更新処理
 		if (keys[KEY_INPUT_W])
 		{
-			lineStart.y -= 10;
-			lineEnd.y -= 10;
+			lineStart.y -= speed;
+			lineEnd.y -= speed;
 		}
 		if (keys[KEY_INPUT_S])
 		{
-			lineStart.y += 10;
-			lineEnd.y += 10;
+			lineStart.y += speed;
+			lineEnd.y += speed;
 		}
 		if (keys[KEY_INPUT_A])
 		{
-			lineStart.x -= 10;
-			lineEnd.x -= 10;
+			lineStart.x -= speed;
+			lineEnd.x -= speed;
 		}
 		if (keys[KEY_INPUT_D])
 		{
-			lineStart.x += 10;
-			lineEnd.x += 10;
+			lineStart.x += speed;
+			lineEnd.x += speed;
 		}
 
 		hitFlag = CheckLineCircle(lineStart, lineEnd, circle, circleR);
